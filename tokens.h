@@ -6,7 +6,7 @@
 // tokens for operations
 enum op {ADD, SUB, MUL, DIV, MOD, EQ, GE, LE, NE, G, L};
 
-int matoptoken(const std::string yytext) {
+int maptoopttoken(const std::string yytext) {
   if (yytext == "+") return ADD;
   if (yytext == "-") return SUB;
   if (yytext == "*") return MUL;

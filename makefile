@@ -1,5 +1,5 @@
-comp : symbol.o parser.o lexer.o
-	g++ -o comp symbol.o parser.o lexer.o emit.o -lfl
+comp : symbol.o parser.o lexer.o main.o
+	g++ -o comp symbol.o parser.o lexer.o emit.o main.o -lfl
 
 lexer.o : lexer.cpp symbol.h global.h
 	g++ -c lexer.cpp
@@ -18,6 +18,9 @@ emit.o : emit.cpp global.h
 
 symbol.o : symbol.cpp symbol.h global.h
 	g++ -c symbol.cpp
+
+main.o : main.cpp global.h
+	g++ -c main.cpp
 
 clean : 
 	-rm comp 

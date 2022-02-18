@@ -1,6 +1,5 @@
 #include "global.h"
 #include <vector>
-#include <memory>
 #include <string>
 #include <iostream>
 #include <iomanip>
@@ -12,7 +11,7 @@ int lookup (const std::string s) {
   for (int p = symtable.size() - 1; p > 0; p--)
     if (symtable[p].name == s)
       return p;
-  return 0;
+  return -1;
 }
 
 int insert (const std::string s, int tok) {
@@ -22,7 +21,7 @@ int insert (const std::string s, int tok) {
 
 int insert (std::string s, int token, int type) {
   int look = lookup(s);
-  if (look != 0) 
+  if (look >= 0) 
     return look;
 
   symtable.push_back({s, token, (vartype)type});
@@ -42,6 +41,7 @@ void prntSymtable() {
   int i=0;
   for (auto symbol : symtable) {
     std::cout 
+    << i++ << ":"
     << "name:" << std::setw(lenName + 2) << symbol.name 
     << ", token:"<< std::setw(lenTok + 2) << token_name(symbol.token)
     << ", type:" << std::setw(LenType + 2) << token_name(symbol.type)

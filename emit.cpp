@@ -1,7 +1,18 @@
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include "global.h"
 
-void toOS(std::string input) {
-  std::cout << input << std::endl;
+std::stringstream outb;
+
+void wrtInstr (std::string instr, std::string repr) {
+  outb << "\t" << instr << "\t;" << repr << std::endl;
+}
+
+void wrtLbl (std::string label) {
+  outb << label << std::endl;
+}
+
+void dumpToFile(std::string fname) {
+  std::cout << outb.str() << std::endl;
 }

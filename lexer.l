@@ -48,9 +48,9 @@ write       {return WRITE;}
 read        {return READ;}
 
 {assign}    {return ASSIGN;}
-{addop}     {yylval = matoptoken(yytext); return ADDOP;}
-{mulop}     {yylval = matoptoken(yytext); return MULOP;}
-{relop}     {yylval = matoptoken(yytext); return RELOP;}
+{addop}     {yylval = maptoopttoken(yytext); return ADDOP;}
+{mulop}     {yylval = maptoopttoken(yytext); return MULOP;}
+{relop}     {yylval = maptoopttoken(yytext); return RELOP;}
 
 {integer}   {yylval = insert(yytext, VAL, INT); return VAL;}
 {number}    {yylval = insert(yytext, VAL, REAL); return VAL;}

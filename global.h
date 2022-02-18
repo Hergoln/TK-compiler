@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
+
 #include <string.h>
 #include <vector>
 #include "symbol.h"
 
 extern int lineno;
+extern int errRaised;
+extern int verbose;
 extern std::vector<Symbol> symtable;
 
 // symbol
@@ -24,7 +26,9 @@ void yyerror (char const*);
 const char* token_name(int);
 
 // tokens
-int matoptoken(const std::string);
+int maptoopttoken(const std::string);
 
 // emit
-void toOS(std::string);
+void wrtInstr(std::string, std::string);
+void wrtLbl(std::string);
+void dumpToFile(std::string);

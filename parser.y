@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 
-int verbose = 0;
 int errRaised = 0;
 %}
 
@@ -45,11 +44,21 @@ int errRaised = 0;
 
 %%
 program: 
-    PROGRAM ID '(' program_arguments ')' ';' { toOS("Hello");}
+    PROGRAM ID 
+    {
+        wrtInstr("jump.i\t#lbl0", "jump.i lab0");
+    } 
+    '(' program_arguments ')' ';'
     global_vars
     declarations
+    {
+        wrtLbl("lbl0:");
+    }
     program_continuation
-    '.' program_end
+    '.' DONE {
+        wrtInstr("exit\t","exit");
+        return 0;
+    };
     ;
 
 program_arguments:
@@ -174,11 +183,6 @@ read:
 
 write:
     WRITE '(' expression_list ')' {if(verbose)printf("wrote %d\n", $2);}
-
-program_end:
-  DONE {
-    return 0;
-    };
 %%
 
 
@@ -190,20 +194,3 @@ void yyerror(char const *s){
 const char* token_name(int token) {
     return yytname[YYTRANSLATE(token)];
 }
-
-int main(int argc, char** argv){
-  if (argc > 1){
-    std::string flag = std::string(argv[1]);
-    if (flag == "v" || flag == "verbose")
-      verbose = 1;
-  }
-  yyparse();
-  if(!errRaised) {
-    printf("Compilation successful!!\n"); 
-  }
-
-  if(verbose) {   
-    printf("Printout of symbols table:\n");
-    prntSymtable();
-  }
-};
