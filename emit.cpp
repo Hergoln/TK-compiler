@@ -1,7 +1,5 @@
-#include <iomanip>
-#include <iostream>
-#include <sstream>
 #include "global.h"
+#include <sstream>
 
 std::stringstream outb;
 

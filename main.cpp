@@ -23,5 +23,7 @@ int main(int argc, char** argv){
   std::string outfname = "out.asm";
 
   std::cout << std::endl << "Dumping compiled file:" << std::endl << std::endl;
-  dumpToFile(outfname);
+  if(verbose) {
+    dumpToFile(outfname);
+  }
 };

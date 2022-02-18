@@ -1,6 +1,6 @@
-#include <stdio.h>
 #include <stdlib.h>
-
+#include <iostream>
+#include <iomanip>
 #include <string.h>
 #include <vector>
 #include "symbol.h"

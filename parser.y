@@ -1,8 +1,5 @@
 %{
 #include "global.h"
-#include "symbol.h"
-#include <iostream>
-#include <string>
 
 int errRaised = 0;
 %}
@@ -61,10 +58,7 @@ program:
     };
     ;
 
-program_arguments:
-    ID |
-    program_arguments ',' ID
-    ;
+program_arguments: ID | program_arguments ',' ID;
 
 global_vars:
     global_vars VAR global_symbols ':' type ';' |

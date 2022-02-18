@@ -25,5 +25,6 @@ main.o : main.cpp global.h
 clean : 
 	-rm comp 
 	-rm parser.cpp
+	-rm parser.hpp
 	-rm lexer.cpp
 	-rm *.o

@@ -1,9 +1,4 @@
 #include "global.h"
-#include <vector>
-#include <string>
-#include <iostream>
-#include <iomanip>
-#include "symbol.h"
 
 std::vector<Symbol> symtable;
 

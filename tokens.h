@@ -1,6 +1,3 @@
-#ifndef INCLUDE_H_
-#define INCLUDE_H_
-
 #include <string>
 
 // tokens for operations
@@ -20,5 +17,3 @@ int maptoopttoken(const std::string yytext) {
   if (yytext == "<") return L;
   return -1;
 }
-
-#endif
