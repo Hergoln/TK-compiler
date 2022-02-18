@@ -14,9 +14,6 @@ int insert (std::string, int);
 int lookup (std::string);
 void prntSymtable ();
 
-// error
-void error (std::string);
-
 // lexer
 int yylex ();
 int yylex_destroy ();
@@ -28,3 +25,6 @@ const char* token_name(int);
 
 // tokens
 int matoptoken(const std::string);
+
+// emit
+void toOS(std::string);

@@ -45,7 +45,7 @@ int errRaised = 0;
 
 %%
 program: 
-    PROGRAM ID '(' program_arguments ')' ';'
+    PROGRAM ID '(' program_arguments ')' ';' { toOS("Hello");}
     global_vars
     declarations
     program_continuation
@@ -184,7 +184,7 @@ program_end:
 
 void yyerror(char const *s){
   printf("Error \"%s\" in line %d\n",s, lineno);
-  errRaised = 1;
+  errRaised++;
 };
 
 const char* token_name(int token) {
