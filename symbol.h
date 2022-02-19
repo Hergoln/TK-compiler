@@ -1,5 +1,8 @@
 #include <string>
 
+#define GLOBAL_CONTEXT true
+#define LOCAL_CONTEXT false
+
 struct ArrayInfo {
   int startId;
   int stopId;
@@ -7,7 +10,7 @@ struct ArrayInfo {
 };
 
 struct Symbol{
-  bool isGlobal = true;
+  bool isGlobal;
   bool isReference = false;
   std::string name;   // name of token ('a', 'bis', 'center')
   int token;          // kind of token {ID, FUNCTION, PROCEDURE, VAR}

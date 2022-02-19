@@ -63,7 +63,7 @@ program:
 program_arguments: ID | program_arguments ',' ID;
 
 global_vars:
-    global_vars VAR global_symbols ':' type ';'
+    global_vars VAR vars ':' type ';'
     {
         if(checkType($5)) YYERROR;
 
@@ -91,11 +91,9 @@ type:
     }
     ;
 
-global_symbols:
-    ID 
-    {idsList.push_back($1);}
-    | global_symbols ',' ID 
-    {idsList.push_back($3);}
+vars:
+    ID {idsList.push_back($1);}
+    | vars ',' ID {idsList.push_back($3);}
     ;
 
 declarations:
@@ -113,6 +111,7 @@ functional:
             std::cout << std::endl;
         }
         clearLocal();
+        setContext(GLOBAL_CONTEXT);
         // offset?
     }
     ;
@@ -123,13 +122,24 @@ heads:
 function:
     FUNC ID 
     {
+        setContext(LOCAL_CONTEXT);
         wrtLbl(symtable[$2].name);
     }
     arguments ':' type ';'
     {
         // offset?
-        symtable[$2].token = FUNC;
-        symtable[$2].type = $5;
+        Symbol* func = &symtable[$2];
+        func->token = FUNC;
+        func->type = $5;
+        
+        Symbol returnVar;
+        returnVar.name = func->name;
+        returnVar.token = VAR;
+        returnVar.type = $5;
+        returnVar.isReference = true;
+        returnVar.isGlobal = false;
+        insert(returnVar);
+        // address?
     }
     ;
 
@@ -145,7 +155,7 @@ paramGrps:
     paramGrps ';' paramGrp | paramGrp ;
 
 paramGrp:
-    param ':' type 
+    vars ':' type 
     {
         if(checkType($3)) YYERROR;
 
@@ -158,10 +168,6 @@ paramGrp:
         }
         idsList.clear();
     };
-
-param:
-    param ',' ID {idsList.push_back($3);}
-    | ID {idsList.push_back($1);}; 
 
 procedure:
     PROC ID
@@ -176,12 +182,19 @@ procedure:
     ;
 
 local_vars:
-    local_vars VAR local_symbols ':' type ';' |
-    ;
+    local_vars VAR vars ':' type ';' 
+    {
+        if(checkType($5)) YYERROR;
 
-local_symbols:
-    ID 
-    | local_symbols ',' ID
+        for(auto &symTabIdx : idsList) {
+            Symbol* sym = &symtable[symTabIdx];
+            sym->type = $5;       
+            sym->token = VAR;
+            //address
+        }
+        idsList.clear();
+    }
+    | // empty
     ;
 
 function_body:

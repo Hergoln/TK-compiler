@@ -21,6 +21,8 @@ int lookup (std::string);
 void initSymtable ();
 void prntSymtable ();
 void clearLocal();
+void setContext(bool);
+bool context();
 
 // lexer
 int yylex ();

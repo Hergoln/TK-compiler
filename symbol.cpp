@@ -2,6 +2,7 @@
 #include "parser.hpp"
 
 std::vector<Symbol> symtable;
+bool globalContext = true;
 
 void initSymtable() {
   Symbol read;
@@ -25,6 +26,14 @@ void initSymtable() {
   symtable.push_back(write);
 }
 
+void setContext(bool context) {
+  globalContext = context;
+}
+
+bool context() {
+  return globalContext;
+}
+
 int lookup (const std::string s) {
   for (int p = symtable.size() - 1; p > 0; p--)
     if (symtable[p].name == s)
@@ -39,29 +48,31 @@ int insertPlain (Symbol sym) {
 
 int insert (Symbol sym) {
   int look = lookup(sym.name);
-  if (look >= 0) 
+  if (look >= 0 && sym.isGlobal == symtable[look].isGlobal)
     return look;
   return insertPlain(sym);
 }
 
 int insert (const std::string s, int tok) {
   int look = lookup(s);
-  if (look >= 0) 
+  if (look >= 0 && globalContext == symtable[look].isGlobal)
     return look;
   Symbol sym;
   sym.name = s;
   sym.token = tok;
+  sym.isGlobal = globalContext;
   return insertPlain(sym);
 }
 
 int insert (std::string s, int token, int type) {
   int look = lookup(s);
-  if (look >= 0) 
+  if (look >= 0 && globalContext == symtable[look].isGlobal) 
     return look;
   Symbol sym;
   sym.name = s;
   sym.token = token;
   sym.type = type;
+  sym.isGlobal = globalContext;
   return insertPlain(sym);
 }
 
