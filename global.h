@@ -48,5 +48,5 @@ void wrtLbl (std::string);
 void dumpToFile (std::string);
 void emitAssign (Symbol, Symbol);
 void emitCall (std::string);
-void emitADDOP (Symbol, int, Symbol, Symbol);
-void emitMULOP (Symbol, int, Symbol, Symbol);
+int emitADDOP (Symbol, int, Symbol);
+int emitMULOP (Symbol, int, Symbol);

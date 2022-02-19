@@ -228,8 +228,7 @@ simpler_expression:
     | simpler_expression log term 
     | simpler_expression ADDOP term
     {
-        $$ = newTemp(getResultType($1, $3));
-        emitADDOP(symtable[$1], $2, symtable[$3], symtable[$$]);
+        $$ = emitADDOP(symtable[$1], $2, symtable[$3]);
     }
     ;
 
@@ -240,8 +239,7 @@ term:
     factor 
     | term MULOP factor
     {
-        $$ = newTemp(getResultType($1, $3));
-        emitMULOP(symtable[$1], $2, symtable[$3], symtable[$$]);
+        $$ = emitMULOP(symtable[$1], $2, symtable[$3]);
     }
     ;
 

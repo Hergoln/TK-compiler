@@ -121,15 +121,17 @@ std::string addop(int op) {
   else if (op == SUB) return "sub.";
 }
 
-void emitADDOP(Symbol lvar, int op, Symbol rvar, Symbol res) {
+int emitADDOP(Symbol lvar, int op, Symbol rvar) {
   Expanded exp = expand(lvar, rvar);
-
+  int result = newTemp(exp.tt);
   wrtInstr(
     addop(op) + exp.st + "\t" + format(exp.l) + 
-    "," + format(exp.r) + "," + format(res),
+    "," + format(exp.r) + "," + format(symtable[result]),
     addop(op) + exp.st + "\t$" + exp.l.name + 
-    ",$" + exp.r.name + ",$" + res.name
+    ",$" + exp.r.name + ",$" + symtable[result].name
   );
+
+  return result;
 }
 
 std::string mulop(int op) {
@@ -141,15 +143,17 @@ std::string mulop(int op) {
   }
 }
 
-void emitMULOP(Symbol lvar, int op, Symbol rvar, Symbol res) {
+int emitMULOP(Symbol lvar, int op, Symbol rvar) {
   Expanded exp = expand(lvar, rvar);
-
+  int result = newTemp(exp.tt);
   wrtInstr(
     mulop(op) + exp.st + "\t" + format(exp.l) + 
-    "," + format(exp.r) + "," + format(res),
+    "," + format(exp.r) + "," + format(symtable[result]),
     mulop(op) + exp.st + "\t$" + exp.l.name + 
-    ",$" + exp.r.name + ",$" + res.name
+    ",$" + exp.r.name + ",$" + symtable[result].name
   );
+
+  return result;
 }
 
 void dumpToFile(std::string fname) {
