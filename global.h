@@ -3,7 +3,9 @@
 #include <iomanip>
 #include <string.h>
 #include <vector>
+#include "tokens.h"
 #include "symbol.h"
+#include "parser.hpp"
 
 #define LABEL 512
 
@@ -20,9 +22,12 @@ int lookup (std::string);
 
 void initSymtable ();
 void prntSymtable ();
-void clearLocal();
-void setContext(bool);
-bool context();
+void clearLocal ();
+void setContext (bool);
+int context ();
+int getAddress (std::string);
+int newTemp (int);
+int getResultType (int, int); // indexes of symbols
 
 // lexer
 int yylex ();
@@ -35,9 +40,13 @@ const char* token_name (int);
 bool checkType (int);
 
 // tokens
-int maptoopttoken (const std::string);
+int maptoopttoken (std::string);
 
 // emit
 void wrtInstr (std::string, std::string);
 void wrtLbl (std::string);
 void dumpToFile (std::string);
+void emitAssign (Symbol, Symbol);
+void emitCall (std::string);
+void emitADDOP (Symbol, int, Symbol, Symbol);
+void emitMULOP (Symbol, int, Symbol, Symbol);

@@ -45,7 +45,8 @@ program:
     PROGRAM ID 
     {
         symtable[$2].isGlobal = true;
-        wrtInstr("jump.i\t#lbl0", "jump.i lab0");
+        symtable[$2].token = PROC;
+        wrtInstr("jump.i\t#lbl0", "jump.i lbl0");
     } 
     '(' program_arguments ')' ';'
     global_vars
@@ -53,7 +54,7 @@ program:
     {
         wrtLbl("lbl0");
     }
-    program_continuation
+    BEG function_body END
     '.' DONE {
         wrtInstr("exit\t","exit");
         return 0;
@@ -72,7 +73,7 @@ global_vars:
             sym->type = $5;       
             sym->token = VAR;
             sym->isGlobal = true;
-            //address
+            sym->address = getAddress(sym->name);
         }
         idsList.clear();
     }
@@ -203,52 +204,72 @@ function_body:
 stmts:
     stmts ';' stmt | stmt ;
 
-program_continuation:
-    BEG program_body END;
-
-program_body:
-    stmts | ; 
-
 stmt:
-    var ASSIGN expression |
-    factor | 
-    write | 
-    read |
-    WHILE expression DO optional_stmts |
-    IF expression THEN optional_stmts ELSE optional_stmts;
+    var ASSIGN simpler_expression
+    {
+        emitAssign(symtable[$1], symtable[$3]);
+    }
+    | factor 
+    | write 
+    | read 
+    | WHILE expression DO optional_stmts 
+    | IF expression THEN optional_stmts ELSE optional_stmts;
 
 optional_stmts:
-    BEG program_body END |
-    stmt ;
+    BEG function_body END 
+    | stmt ;
 
 expression:
     simpler_expression | simpler_expression RELOP simpler_expression;
 
 simpler_expression:
-    term | 
-    ADDOP term | 
-    simpler_expression log term |
-    simpler_expression ADDOP term;
+    term 
+    | ADDOP term 
+    | simpler_expression log term 
+    | simpler_expression ADDOP term
+    {
+        $$ = newTemp(getResultType($1, $3));
+        emitADDOP(symtable[$1], $2, symtable[$3], symtable[$$]);
+    }
+    ;
 
 log:
     AND | OR;
 
 term:
-    factor | term MULOP factor;
+    factor 
+    | term MULOP factor
+    {
+        $$ = newTemp(getResultType($1, $3));
+        emitMULOP(symtable[$1], $2, symtable[$3], symtable[$$]);
+    }
+    ;
 
 factor:
-    var |
-    VAL |
-    NOT factor |
-    ID '(' expression_list ')' | 
-    '(' expression ')';
+    var 
+    | VAL 
+    | NOT factor 
+    | ID '(' expression_list ')'
+    {
+        Symbol sym = symtable[$1];
+        if(sym.token == FUNC || sym.token == PROC) {
+            emitCall(sym.name);
+        }
+    } 
+    | '(' expression ')';
 
 var:
-    ID | 
-    ID '[' expression ']';
+    ID 
+    {
+        Symbol sym = symtable[$1];
+        if(sym.token == FUNC || sym.token == PROC) {
+            emitCall(sym.name);
+        }
+    }
+    | ID '[' expression ']' {$$ = $1;};
 
 expression_list:
-    expression ',' expression | expression;
+    expression ',' expression | expression;                                                                                                          
 
 read:
     READ '(' expression_list ')' {if(verbose)printf("read %d\n", $2);}

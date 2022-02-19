@@ -1,7 +1,7 @@
 #include <string>
 
-#define GLOBAL_CONTEXT true
-#define LOCAL_CONTEXT false
+#define GLOBAL_CONTEXT 1
+#define LOCAL_CONTEXT 0
 
 struct ArrayInfo {
   int startId;

@@ -1,7 +1,5 @@
 %{
 #include "global.h"
-#include "parser.hpp"
-#include "tokens.h"
 
 int lineno = 1;
 %}

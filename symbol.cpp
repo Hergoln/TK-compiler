@@ -1,9 +1,10 @@
 #include "global.h"
-#include "parser.hpp"
 
 std::vector<Symbol> symtable;
-bool globalContext = true;
+int globalContext = true;
+int tempCount = 0;
 
+// manipulation
 void initSymtable() {
   Symbol read;
   read.name = "read";
@@ -24,14 +25,6 @@ void initSymtable() {
 
   symtable.push_back(read);
   symtable.push_back(write);
-}
-
-void setContext(bool context) {
-  globalContext = context;
-}
-
-bool context() {
-  return globalContext;
 }
 
 int lookup (const std::string s) {
@@ -76,6 +69,67 @@ int insert (std::string s, int token, int type) {
   return insertPlain(sym);
 }
 
+int newTemp (int type) {
+  Symbol t;
+  t.isGlobal = globalContext;
+  t.name = "t" + std::to_string(tempCount);
+  t.type = type;
+  t.token = VAR;
+  t.address = getAddress("");
+  ++tempCount;
+  return insertPlain(t);
+}
+
+void clearLocal() {
+  int i;
+  for(i=0; i <symtable.size() && symtable[i].isGlobal;++i);
+  symtable.erase(symtable.begin() + i, symtable.end());
+}
+
+void setContext(bool context) {
+  globalContext = context;
+}
+
+// access
+int context() {
+  return globalContext;
+}
+
+const int REFSIZE = 4;
+const int NONESIZE = 0;
+const int INTSIZE = 4;
+const int REALSIZE = 8;
+
+int getSymbolSize(Symbol symbol) {
+  if(symbol.isReference) {
+    return REFSIZE;
+  } else if(symbol.token == VAR) {
+    if(symbol.type == INT) 
+      return INTSIZE;
+    else
+      return REALSIZE;
+  } else if(symbol.token == ARRAY) {
+    // to change and calculate later
+    return NONESIZE;
+  }
+  return NONESIZE;
+}
+
+int getAddress(std::string name) {
+  int address = 0;
+  for (auto sym : symtable) {
+    if(sym.name != name) {
+      address += getSymbolSize(sym);
+    }
+  }
+  return address;
+}
+
+int getResultType(int l, int r) {
+  return (symtable[l].type == REAL || symtable[r].type == REAL) ? REAL : INT;
+}
+
+// representation
 void prntSymtable() {
   int lenName = 0, lenTok = 0, LenType = 0;
   for (auto symbol : symtable) {
@@ -95,12 +149,7 @@ void prntSymtable() {
     << std::setw(lenName + 2) << symbol.name << " "
     << std::setw(lenTok + 2) << token_name(symbol.token) << " "
     << std::setw(LenType + 2) << token_name(symbol.type)
+    << (symbol.token == VAR ? "\toffset=" + std::to_string(symbol.address) : "")
     << std::endl;
   }
-}
-
-void clearLocal() {
-  int i;
-  for(i=0; i <symtable.size() && symtable[i].isGlobal;++i);
-  symtable.erase(symtable.begin() + i, symtable.end());
 }
