@@ -16,7 +16,7 @@ parser.o : parser.cpp emit.o symbol.h global.h
 emit.o : emit.cpp global.h
 	g++ -c emit.cpp
 
-symbol.o : symbol.cpp symbol.h global.h
+symbol.o : symbol.cpp symbol.h global.h parser.hpp
 	g++ -c symbol.cpp
 
 main.o : main.cpp global.h

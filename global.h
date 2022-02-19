@@ -5,6 +5,8 @@
 #include <vector>
 #include "symbol.h"
 
+#define LABEL 512
+
 extern int lineno;
 extern int errRaised;
 extern int verbose;
@@ -13,7 +15,9 @@ extern std::vector<Symbol> symtable;
 // symbol
 int insert (std::string, int, int);
 int insert (std::string, int);
+int insert (Symbol);
 int lookup (std::string);
+
 void prntSymtable ();
 
 // lexer

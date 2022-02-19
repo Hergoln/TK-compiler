@@ -2,6 +2,7 @@
 #include "global.h"
 
 int errRaised = 0;
+std::vector<int> idsList;
 %}
 
 %token-table
@@ -43,6 +44,7 @@ int errRaised = 0;
 program: 
     PROGRAM ID 
     {
+        symtable[$1].isGlobal = true;
         wrtInstr("jump.i\t#lbl0", "jump.i lab0");
     } 
     '(' program_arguments ')' ';'
@@ -61,7 +63,23 @@ program:
 program_arguments: ID | program_arguments ',' ID;
 
 global_vars:
-    global_vars VAR global_symbols ':' type ';' |
+    global_vars VAR global_symbols ':' type ';'
+    {
+        if($5 != INT && $5 != REAL && $5 != ARRAY) {
+            yyerror("Unknown type");
+            YYERROR;
+        }
+
+        for(auto &symTabIdx : idsList) {
+            Symbol* sym = &symtable[symTabIdx];
+            sym->type = $5;       
+            sym->token = VAR;
+            sym->isGlobal = true;
+            //address
+        }
+        idsList.clear();
+    }
+    | //empty
     ;
 
 simple_type:
@@ -69,23 +87,33 @@ simple_type:
 
 type:
     simple_type | 
-    ARRAY '[' VAL '.' '.' VAL']' OF simple_type;
+    ARRAY '[' VAL '.' '.' VAL']' OF simple_type
+    {
+        $$ = ARRAY;
+        // info about array
+    }
+    ;
 
 global_symbols:
-    ID |
-    global_symbols ',' ID
+    ID 
+    {idsList.push_back($1);}
+    | global_symbols ',' ID 
+    {idsList.push_back($3);}
     ;
 
 declarations:
-    declarations functional ';' |  ;
+    declarations functional ';' 
+    | //empty
+    ;
 
 functional:
-    function | procedure ;   
+    functional_heads local_vars BEG function_body END;
     
+functional_heads:
+    function | procedure;
+
 function:
-    FUNCTION ID function_head ':' type ';'
-    local_vars
-    BEG function_body END;
+    FUNCTION ID function_head ':' type ';';
 
 function_head:
     '(' declarations_params ')' | ;
@@ -118,9 +146,7 @@ param:
     param ',' ID | ID ; 
 
 procedure:
-    PROCEDURE ID procedure_head ';'
-    local_vars
-    BEG function_body END ;
+    PROCEDURE ID procedure_head ';';
 
 procedure_head:
     '(' declarations_params ')' | ;
