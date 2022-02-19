@@ -18,6 +18,7 @@ int insert (std::string, int);
 int insert (Symbol);
 int lookup (std::string);
 
+void initSymtable();
 void prntSymtable ();
 
 // lexer

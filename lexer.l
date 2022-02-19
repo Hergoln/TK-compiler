@@ -32,8 +32,8 @@ real        {yylval = REAL; return REAL;}
 array       {return ARRAY;}
 of          {return OF;}
 
-procedure   {return PROCEDURE;}
-function    {return FUNCTION;}
+procedure   {return PROC;}
+function    {return FUNC;}
 begin       {return BEG;}
 end         {return END;}
 not         {return NOT;}

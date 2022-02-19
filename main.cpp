@@ -10,6 +10,8 @@ int main(int argc, char** argv){
     if (flag == "v" || flag == "verbose")
       verbose = 1;
   }
+  initSymtable();
+
   yyparse();
   if(!errRaised) {
     printf("Compilation successful!!\n"); 

@@ -8,7 +8,7 @@ void wrtInstr (std::string instr, std::string repr) {
 }
 
 void wrtLbl (std::string label) {
-  outb << label << std::endl;
+  outb << label + ":" << std::endl;
 }
 
 void dumpToFile(std::string fname) {

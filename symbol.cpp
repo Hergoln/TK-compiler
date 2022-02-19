@@ -6,13 +6,15 @@ std::vector<Symbol> symtable;
 void initSymtable() {
   Symbol read;
   read.name = "read";
-  read.token = PROCEDURE;
+  read.token = PROC;
   read.isGlobal = true;
+  read.type = NONE;
   
   Symbol write;
   write.name = "write";
-  write.token = PROCEDURE;
+  write.token = PROC;
   write.isGlobal = true;
+  write.type = NONE;
 
   Symbol lbl0;
   lbl0.name = "lbl0";
@@ -76,12 +78,13 @@ void prntSymtable() {
 
   int i=0;
   for (auto symbol : symtable) {
-    std::cout 
-    << i++ << " "
+    std::cout
+    << std::setw(std::to_string(symtable.size()).length()) << i++ << " "
     << (symbol.isGlobal ? "global " : "local  ")
+    << std::setw(4) << (symbol.isReference ? "ref" : "")
     << std::setw(lenName + 2) << symbol.name << " "
     << std::setw(lenTok + 2) << token_name(symbol.token) << " "
     << std::setw(LenType + 2) << token_name(symbol.type)
-    << "\n";
+    << std::endl;
   }
 }

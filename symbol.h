@@ -7,10 +7,13 @@ struct ArrayInfo {
 };
 
 struct Symbol{
-  bool isGlobal;
-  bool isReference;
+  bool isGlobal = true;
+  bool isReference = false;
   std::string name;   // name of token ('a', 'bis', 'center')
   int token;          // kind of token {ID, FUNCTION, PROCEDURE, VAR}
   int type;           // type of token INT/REAL/ARRAY
   int address;
+  ArrayInfo
+  std::vector<>
+  std::vector<Symbol> arguments;
 };

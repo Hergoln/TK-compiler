@@ -12,8 +12,8 @@ std::vector<int> idsList;
 %token ARRAY
 %token OF
 
-%token PROCEDURE
-%token FUNCTION
+%token PROC
+%token FUNC
 %token BEG
 %token END
 %token NOT
@@ -44,14 +44,14 @@ std::vector<int> idsList;
 program: 
     PROGRAM ID 
     {
-        symtable[$1].isGlobal = true;
+        symtable[$2].isGlobal = true;
         wrtInstr("jump.i\t#lbl0", "jump.i lab0");
     } 
     '(' program_arguments ')' ';'
     global_vars
     declarations
     {
-        wrtLbl("lbl0:");
+        wrtLbl("lbl0");
     }
     program_continuation
     '.' DONE {
@@ -107,16 +107,65 @@ declarations:
     ;
 
 functional:
-    functional_heads local_vars BEG function_body END;
+    heads local_vars BEG function_body END
+    {
+        wrtInstr("leave\t", "leave");
+        wrtInstr("return\t", "return");
+        if(verbose)  {
+            prntSymtable();
+            std::cout << std::endl;
+        }
+        // offset?
+    }
+    ;
     
-functional_heads:
+heads:
     function | procedure;
 
 function:
-    FUNCTION ID function_head ':' type ';';
+    FUNC ID 
+    {
+        wrtLbl(symtable[$2].name);
+    }
+    arguments ':' type ';'
+    {
+        // offset?
+        symtable[$2].token = FUNC;
+        symtable[$2].type = $5;
+    }
+    ;
 
-function_head:
-    '(' declarations_params ')' | ;
+arguments:
+    '(' declarations_params ')' 
+    {
+
+    }
+    | //empty
+    ;
+
+declarations_params:
+    paramGrps | ;
+
+paramGrps:
+    paramGrps ';' paramGrp | paramGrp ;
+
+paramGrp:
+    param ':' type;
+
+param:
+    param ',' ID | ID ; 
+
+procedure:
+    PROC ID
+    {
+        wrtLbl(symtable[$2].name);
+    }
+    arguments ';'
+    {
+        // offset?
+        symtable[$2].token = PROC;
+    }
+    ;
 
 local_vars:
     local_vars VAR local_symbols ':' type ';' |
@@ -132,24 +181,6 @@ function_body:
 
 stmts:
     stmts ';' stmt | stmt ;
-
-declarations_params:
-    paramGrps | ;
-
-paramGrps:
-    paramGrps ';' paramGrp | paramGrp ;
-
-paramGrp:
-    param ':' type;
-
-param:
-    param ',' ID | ID ; 
-
-procedure:
-    PROCEDURE ID procedure_head ';';
-
-procedure_head:
-    '(' declarations_params ')' | ;
 
 program_continuation:
     BEG program_body END;
