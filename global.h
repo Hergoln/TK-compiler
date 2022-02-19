@@ -18,8 +18,9 @@ int insert (std::string, int);
 int insert (Symbol);
 int lookup (std::string);
 
-void initSymtable();
+void initSymtable ();
 void prntSymtable ();
+void clearLocal();
 
 // lexer
 int yylex ();
@@ -28,12 +29,13 @@ int yylex_destroy ();
 // parser
 int yyparse ();
 void yyerror (char const*);
-const char* token_name(int);
+const char* token_name (int);
+bool checkType (int);
 
 // tokens
-int maptoopttoken(const std::string);
+int maptoopttoken (const std::string);
 
 // emit
-void wrtInstr(std::string, std::string);
-void wrtLbl(std::string);
-void dumpToFile(std::string);
+void wrtInstr (std::string, std::string);
+void wrtLbl (std::string);
+void dumpToFile (std::string);

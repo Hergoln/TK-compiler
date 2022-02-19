@@ -32,7 +32,6 @@ int lookup (const std::string s) {
   return -1;
 }
 
-
 int insertPlain (Symbol sym) {
   symtable.push_back(sym);
   return symtable.size() - 1;
@@ -87,4 +86,10 @@ void prntSymtable() {
     << std::setw(LenType + 2) << token_name(symbol.type)
     << std::endl;
   }
+}
+
+void clearLocal() {
+  int i;
+  for(i=0; i <symtable.size() && symtable[i].isGlobal;++i);
+  symtable.erase(symtable.begin() + i, symtable.end());
 }

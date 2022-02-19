@@ -13,7 +13,6 @@ struct Symbol{
   int token;          // kind of token {ID, FUNCTION, PROCEDURE, VAR}
   int type;           // type of token INT/REAL/ARRAY
   int address;
-  ArrayInfo
-  std::vector<>
+  ArrayInfo arrInfo;
   std::vector<Symbol> arguments;
 };

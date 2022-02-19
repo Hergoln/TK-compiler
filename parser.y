@@ -65,10 +65,7 @@ program_arguments: ID | program_arguments ',' ID;
 global_vars:
     global_vars VAR global_symbols ':' type ';'
     {
-        if($5 != INT && $5 != REAL && $5 != ARRAY) {
-            yyerror("Unknown type");
-            YYERROR;
-        }
+        if(checkType($5)) YYERROR;
 
         for(auto &symTabIdx : idsList) {
             Symbol* sym = &symtable[symTabIdx];
@@ -115,6 +112,7 @@ functional:
             prntSymtable();
             std::cout << std::endl;
         }
+        clearLocal();
         // offset?
     }
     ;
@@ -136,24 +134,34 @@ function:
     ;
 
 arguments:
-    '(' declarations_params ')' 
-    {
-
-    }
+    '(' arguments_params ')'
     | //empty
     ;
 
-declarations_params:
+arguments_params:
     paramGrps | ;
 
 paramGrps:
     paramGrps ';' paramGrp | paramGrp ;
 
 paramGrp:
-    param ':' type;
+    param ':' type 
+    {
+        if(checkType($3)) YYERROR;
+
+        for(auto &symTabIdx : idsList) {
+            Symbol* sym = &symtable[symTabIdx];
+            sym->type = $3;
+            sym->token = VAR;
+            sym->isGlobal = false;
+            sym->isReference = true;
+        }
+        idsList.clear();
+    };
 
 param:
-    param ',' ID | ID ; 
+    param ',' ID {idsList.push_back($3);}
+    | ID {idsList.push_back($1);}; 
 
 procedure:
     PROC ID
@@ -172,8 +180,8 @@ local_vars:
     ;
 
 local_symbols:
-    ID |
-    local_symbols ',' ID
+    ID 
+    | local_symbols ',' ID
     ;
 
 function_body:
@@ -241,6 +249,14 @@ void yyerror(char const *s){
   printf("Error \"%s\" in line %d\n",s, lineno);
   errRaised++;
 };
+
+bool checkType(int type) {
+    if(type != INT && type != REAL && type != ARRAY) {
+        yyerror("Unknown type");
+        return true;
+    }
+    return false;
+}
 
 const char* token_name(int token) {
     return yytname[YYTRANSLATE(token)];
