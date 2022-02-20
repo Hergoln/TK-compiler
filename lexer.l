@@ -17,7 +17,7 @@ id {letter}({letter}|{integer})*
 assign ":="
 addop "-"|"+"
 relop ">"|"<"|">="|"<="|"<>"|"="
-mulop "*"|"/"|"div"|"mod"
+mulop "*"|"/"|"div"|"mod"|"and"
 
 %%
 \r?\n       lineno++;
@@ -35,8 +35,7 @@ function    {return FUNC;}
 begin       {return BEG;}
 end         {return END;}
 not         {return NOT;}
-or          {return OR;}
-and         {return AND;}
+or          {yylval = maptoopttoken(yytext); return OR;}
 if          {return IF;}
 then        {return THEN;}
 else        {return ELSE;}

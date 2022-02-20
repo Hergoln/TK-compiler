@@ -7,7 +7,6 @@
 #include "symbol.h"
 #include "parser.hpp"
 
-#define LABEL 512
 #define UNCONDITIONAL -1
 
 extern int lineno;
@@ -49,10 +48,13 @@ int maptoopttoken (std::string);
 // emit
 void wrtInstr (std::string, std::string);
 void wrtLbl (std::string);
-void dumpToFile (std::string);
+void emitIntToReal (Symbol, Symbol);
+void emitRealToInt (Symbol, Symbol);
 void emitAssign (Symbol, Symbol);
 void emitCall (std::string);
 int emitADDOP (Symbol, int, Symbol);
 int emitMULOP (Symbol, int, Symbol);
+int emitRELOP (Symbol, int, Symbol);
 void emitJump (int, Symbol, Symbol, Symbol);
 void emitWrite (Symbol);
+void dumpToFile (std::string);

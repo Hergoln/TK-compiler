@@ -17,8 +17,6 @@ std::vector<int> idsList;
 %token BEG
 %token END
 %token NOT
-%token OR
-%token AND
 %token IF
 %token THEN
 %token ELSE
@@ -29,6 +27,7 @@ std::vector<int> idsList;
 
 %token ASSIGN
 %token ADDOP
+%token OR
 %token RELOP
 %token MULOP
 
@@ -38,6 +37,7 @@ std::vector<int> idsList;
 %token ID
 
 %token NONE
+%token LABEL
 %token DONE
 
 %%
@@ -212,12 +212,27 @@ stmt:
     | factor 
     | write 
     | read 
-    | WHILE expression DO optional_stmts 
+    | WHILE expression DO 
+    {
+        int loop = newLabel();
+        int endLoop = newLabel();
+        wrtLbl(symtable[loop].name);
+
+        int fNum = newNum("0", symtable[$2].type);
+        emitJump(EQ, symtable[$2], symtable[fNum], symtable[endLoop]);
+        $1 = loop;
+        $2 = endLoop;
+    }
+    optional_stmts
+    {
+        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[$1]);
+        wrtLbl(symtable[$2].name);
+    }
     | IF expression 
     {
         int then = newLabel();
         int fNum = newNum("0", symtable[$2].type); // false
-        emitJump(EQ, symtable[fNum], symtable[$2], symtable[then]);
+        emitJump(EQ, symtable[$2], symtable[fNum], symtable[then]);
         $2 = then;
     }
     THEN optional_stmts 
@@ -241,22 +256,43 @@ expression:
     simpler_expression 
     | simpler_expression RELOP simpler_expression
     {
-        
+        int logicalVal = newTemp(getResultType($1, $3));
+        int truthy = newLabel();
+        emitJump($2, symtable[$1], symtable[$3], symtable[truthy]);
+
+        int fNum = newNum("0", getResultType($1, $3)); // false
+        int end = newLabel();        
+        emitAssign(symtable[logicalVal], symtable[fNum]);
+        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[end]);
+        wrtLbl(symtable[truthy].name);
+
+        int tNum = newNum("1", getResultType($1, $3)); // false
+        emitAssign(symtable[logicalVal], symtable[tNum]);
+        wrtLbl(symtable[end].name);
+        $$ = logicalVal;
     }
     ;
 
 simpler_expression:
     term 
-    | ADDOP term 
-    | simpler_expression log term 
+    | ADDOP term
+    {
+        if ($1 == SUB) {
+            int zero = newNum("0", symtable[$2].type);
+            $$ = emitADDOP(symtable[zero], SUB, symtable[$2]);
+        } else {
+            $$ = $2;
+        }
+    }
+    | simpler_expression OR term
+    {
+        $$ = emitADDOP(symtable[$1], ORop, symtable[$3]);
+    }
     | simpler_expression ADDOP term
     {
         $$ = emitADDOP(symtable[$1], $2, symtable[$3]);
     }
     ;
-
-log:
-    AND | OR;
 
 term:
     factor 
@@ -269,15 +305,42 @@ term:
 factor:
     var 
     | VAL 
-    | NOT factor 
+    | NOT factor
+    {
+        if (symtable[$2].type == REAL){ // realtoint
+            int temp = newTemp(INT);
+            emitRealToInt(symtable[$2], symtable[temp]);
+            $2 = temp;
+        }
+
+        int factorZero = newLabel();
+        int fNum = newNum("0", INT); // false
+        emitJump(EQ, symtable[$2], symtable[fNum], symtable[factorZero]);
+        
+        int endNegate = newLabel();
+        int negated = newTemp(INT);
+        emitAssign(symtable[negated], symtable[fNum]);
+        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[endNegate]);
+        wrtLbl(symtable[factorZero].name);
+
+        int tNum = newNum("1", INT); // true
+        emitAssign(symtable[negated], symtable[tNum]);
+        wrtLbl(symtable[endNegate].name);
+
+        $$ = negated;
+    }
     | ID '(' expression_list ')'
     {
         Symbol sym = symtable[$1];
         if(sym.token == FUNC || sym.token == PROC) {
             emitCall(sym.name);
         }
-    } 
-    | '(' expression ')';
+    }
+    | '(' expression ')'
+    {
+        $$ = $2;
+    }
+    ;
 
 var:
     ID 

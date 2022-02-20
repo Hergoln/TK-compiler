@@ -3,8 +3,6 @@ var i,j,k:integer;
 var x,y,z:real;
 
 begin
-  if x then
-    x:=0.0
-  else
-    x:=1.0
+  while i do
+    x:=x+1.35
 end.

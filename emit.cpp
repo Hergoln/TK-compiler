@@ -121,8 +121,12 @@ Expanded expand (Symbol lvar, Symbol rvar) {
 }
 
 std::string addop (int op) {
-  if (op == ADD) return "add.";
-  else if (op == SUB) return "sub.";
+  switch (op)
+  {
+  case ADD: return "add.";
+  case SUB: return "sub.";
+  case ORop: return "or.";
+  }
 }
 
 int emitADDOP (Symbol lvar, int op, Symbol rvar) {
@@ -144,6 +148,7 @@ std::string mulop (int op) {
   case MUL: return "mul.";
   case DIV: return "div.";
   case MOD: return "mod.";
+  case AND: return "and.";
   }
 }
 
