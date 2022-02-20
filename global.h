@@ -8,11 +8,13 @@
 #include "parser.hpp"
 
 #define LABEL 512
+#define UNCONDITIONAL -1
 
 extern int lineno;
 extern int errRaised;
 extern int verbose;
 extern std::vector<Symbol> symtable;
+extern Symbol EMPTY_SYMBOL;
 
 // symbol
 int insert (std::string, int, int);
@@ -27,6 +29,8 @@ void setContext (bool);
 int context ();
 int getAddress (std::string);
 int newTemp (int);
+int newLabel();
+int newNum(std::string, int);
 int getResultType (int, int); // indexes of symbols
 
 // lexer
@@ -50,3 +54,5 @@ void emitAssign (Symbol, Symbol);
 void emitCall (std::string);
 int emitADDOP (Symbol, int, Symbol);
 int emitMULOP (Symbol, int, Symbol);
+void emitJump (int, Symbol, Symbol, Symbol);
+void emitWrite (Symbol);

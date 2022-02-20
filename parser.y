@@ -213,14 +213,37 @@ stmt:
     | write 
     | read 
     | WHILE expression DO optional_stmts 
-    | IF expression THEN optional_stmts ELSE optional_stmts;
+    | IF expression 
+    {
+        int then = newLabel();
+        int fNum = newNum("0", symtable[$2].type); // false
+        emitJump(EQ, symtable[fNum], symtable[$2], symtable[then]);
+        $2 = then;
+    }
+    THEN optional_stmts 
+    {
+        int elseL = newLabel();
+        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[elseL]);
+        wrtLbl(symtable[$2].name);
+        $4 = elseL;
+    }
+    ELSE optional_stmts
+    {
+        wrtLbl(symtable[$4].name);
+    }
+    ;
 
 optional_stmts:
     BEG function_body END 
     | stmt ;
 
 expression:
-    simpler_expression | simpler_expression RELOP simpler_expression;
+    simpler_expression 
+    | simpler_expression RELOP simpler_expression
+    {
+        
+    }
+    ;
 
 simpler_expression:
     term 
@@ -267,13 +290,26 @@ var:
     | ID '[' expression ']' {$$ = $1;};
 
 expression_list:
-    expression ',' expression | expression;                                                                                                          
+    expression_list ',' expression 
+    {
+        idsList.push_back($3);
+    }
+    | expression
+    {
+        idsList.push_back($1);
+    }
+    ;                                                                                                          
 
 read:
     READ '(' expression_list ')' {if(verbose)printf("read %d\n", $2);}
 
 write:
-    WRITE '(' expression_list ')' {if(verbose)printf("wrote %d\n", $2);}
+    WRITE '(' expression_list ')' 
+    {
+        for (auto id : idsList) {
+            emitWrite(symtable[id]);
+        }
+    }
 %%
 
 

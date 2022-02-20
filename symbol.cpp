@@ -1,8 +1,11 @@
 #include "global.h"
 
+Symbol EMPTY_SYMBOL;
+
 std::vector<Symbol> symtable;
 int globalContext = true;
 int tempCount = 0;
+int labelCount = 0;
 
 // manipulation
 void initSymtable() {
@@ -80,6 +83,14 @@ int newTemp (int type) {
   return insertPlain(t);
 }
 
+int newNum(std::string name, int type) {
+  return insert (name, VAL, type);
+}
+
+int newLabel() {
+  return insert ("lbl" + std::to_string(++labelCount), LABEL, NONE);
+}
+
 void clearLocal() {
   int i;
   for(i=0; i <symtable.size() && symtable[i].isGlobal;++i);
@@ -149,7 +160,7 @@ void prntSymtable() {
     << std::setw(lenName + 2) << symbol.name << " "
     << std::setw(lenTok + 2) << token_name(symbol.token) << " "
     << std::setw(LenType + 2) << token_name(symbol.type)
-    << (symbol.token == VAR ? "\toffset=" + std::to_string(symbol.address) : "")
+    << ((symbol.token == VAR || symbol.token == ARRAY) ? "\toffset=" + std::to_string(symbol.address) : "")
     << std::endl;
   }
 }
