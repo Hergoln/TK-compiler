@@ -60,16 +60,16 @@ Expanded expandAssign (Symbol lvar, Symbol rvar) {
     ttype = lvar.type;
   } else {
     if(lvar.type == INT && rvar.type == REAL) {
-      int temp = newTemp(REAL);
-      stype = tType(REAL);
-      ttype = REAL;
-      emitIntToReal(rvar, symtable[temp]);
-      rvar = symtable[temp];
-    } else if(lvar.type == REAL && rvar.type == INT) {
       int temp = newTemp(INT);
-      stype = tType(INT); 
+      stype = tType(INT);
       ttype = INT;
       emitRealToInt(rvar, symtable[temp]);
+      rvar = symtable[temp];
+    } else if(lvar.type == REAL && rvar.type == INT) {
+      int temp = newTemp(REAL);
+      stype = tType(REAL); 
+      ttype = REAL;
+      emitIntToReal(rvar, symtable[temp]);
       rvar = symtable[temp];
     } else {
       yyerror(("Types " + 

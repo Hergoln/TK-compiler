@@ -212,16 +212,18 @@ stmt:
     | factor 
     | write 
     | read 
-    | WHILE expression DO 
+    | WHILE
     {
         int loop = newLabel();
         int endLoop = newLabel();
         wrtLbl(symtable[loop].name);
-
-        int fNum = newNum("0", symtable[$2].type);
-        emitJump(EQ, symtable[$2], symtable[fNum], symtable[endLoop]);
+        $$ = endLoop;
         $1 = loop;
-        $2 = endLoop;
+    }
+    expression DO 
+    {
+        int fNum = newNum("0", symtable[$2].type);
+        emitJump(EQ, symtable[$3], symtable[fNum], symtable[$2]);
     }
     optional_stmts
     {
@@ -372,6 +374,7 @@ write:
         for (auto id : idsList) {
             emitWrite(symtable[id]);
         }
+        idsList.clear();
     }
 %%
 
