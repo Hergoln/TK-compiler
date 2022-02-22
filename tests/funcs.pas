@@ -2,18 +2,16 @@ program example(input, output);
 var x, y: integer;
 var g,h:real;
 
-function f(a, b: real):real;
-var q:integer;
+procedure p;
 begin
-   q:=4;
-   f:=a+b+q
 end;
 
-function only:integer;
+function f:integer;
 begin
-	only:=1
+ f:=10
 end;
 
 begin
-  only
+ p;
+ x:=f
 end.

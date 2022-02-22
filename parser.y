@@ -337,11 +337,61 @@ term:
 proc:
     ID 
     {
-        // FUNC or PROC
+        Symbol sym = symtable[$1];
+        int incsp = 0;
+        if(sym.token == FUNC) {
+            // push result var
+            int result = newTemp(sym.type);
+            emitPush(symtable[result], newArgument(sym.type, sym.arrInfo));
+            incsp += REFSIZE;
+            $$ = result;
+        }
+        if(sym.token == FUNC || sym.token == PROC) {
+            emitCall(sym.name);
+            if(sym.token == FUNC) {
+                newNum(std::to_string(incsp), INT);
+                emitIncsp(incsp);
+            }    
+        }
+        
     }
     | ID '(' expression_list ')'
     {
-        // FUNC or PROC
+        int id = lookup(symtable[$1].name, FUNC);
+        id = (id == -1 ? lookup(symtable[$1].name, PROC) : id);
+        if ( id == -1 ) {
+            yyerror((symtable[$1].name + " is not callable.").c_str());
+            YYERROR;
+        }
+
+        Symbol func = symtable[id];
+        if(func.arguments.size() < idsList.size()) {
+            yyerror((symtable[$1].name + " called with too many arguments").c_str());
+            YYERROR;
+        } else if (func.arguments.size() > idsList.size()) {
+            yyerror((symtable[$1].name + " called with too few arguments").c_str());
+            YYERROR;
+        }
+
+        int incsp = 0;
+        for(int id = 0; id < idsList.size(); ++id, incsp += REFSIZE) {
+            Symbol given = symtable[idsList[id]];
+            Symbol expectedType = func.arguments[id];
+            emitPush(given, expectedType);
+            
+        }
+        idsList.clear();
+        
+        // push result var
+        int result = newTemp(func.type);
+        emitPush(symtable[result], newArgument(func.type, func.arrInfo));
+        incsp += REFSIZE;
+        $$ = result;
+
+        emitCall(func.name);
+        
+        newNum(std::to_string(incsp), INT);
+        emitIncsp(incsp);
     }
     | write 
     | read 
