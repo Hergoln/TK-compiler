@@ -1,11 +1,12 @@
 #include <string>
+#include <utility>
 
 #define GLOBAL_CONTEXT 1
 #define LOCAL_CONTEXT 0
 
 struct ArrayInfo {
-  int startId;
-  int stopId;
+  int startAddr;
+  int stopAddr;
   int type;           // type of values in array INT/REAL/ARRAY
 };
 

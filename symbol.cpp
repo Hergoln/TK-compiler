@@ -1,6 +1,7 @@
 #include "global.h"
 
 Symbol EMPTY_SYMBOL;
+ArrayInfo EMPTY_ARRAY;
 
 std::vector<Symbol> symtable;
 int globalContext = true;
@@ -33,6 +34,13 @@ void initSymtable() {
 int lookup (const std::string s) {
   for (int p = symtable.size() - 1; p > 0; p--)
     if (symtable[p].name == s)
+      return p;
+  return -1;
+}
+
+int lookup (std::string name, int token) {
+  for (int p = symtable.size() - 1; p > 0; p--)
+    if (symtable[p].name == name && symtable[p].token == token)
       return p;
   return -1;
 }
@@ -78,13 +86,28 @@ int newTemp (int type) {
   t.name = "t" + std::to_string(tempCount);
   t.type = type;
   t.token = VAR;
-  t.address = getAddress("");
+  t.address = 0;
+  int index = insertPlain(t);
+  symtable[index].address = getAddress(t.name); // has to be that way because t is already inserted
   ++tempCount;
-  return insertPlain(t);
+  return index;
 }
 
 int newNum(std::string name, int type) {
   return insert (name, VAL, type);
+}
+
+// does not insert symbol into symtable
+Symbol newArgument (int type, ArrayInfo info) {
+  Symbol t;
+  t.name = "argument";
+  t.type = type;
+  t.arrInfo = info;
+  t.token = NONE;
+  t.isReference = false;
+  t.isGlobal = context();
+  t.address = 2137;
+  return t;
 }
 
 int newLabel() {
@@ -92,9 +115,7 @@ int newLabel() {
 }
 
 void clearLocal() {
-  int i;
-  for(i=0; i <symtable.size() && symtable[i].isGlobal;++i);
-  symtable.erase(symtable.begin() + i, symtable.end());
+  for(int i=symtable.size()-1; i > 0 && !symtable[i].isGlobal; --i, symtable.pop_back());
 }
 
 void setContext(bool context) {
@@ -106,10 +127,10 @@ int context() {
   return globalContext;
 }
 
-const int REFSIZE = 4;
-const int NONESIZE = 0;
-const int INTSIZE = 4;
-const int REALSIZE = 8;
+int REFSIZE = 4;
+int NONESIZE = 0;
+int INTSIZE = 4;
+int REALSIZE = 8;
 
 int getSymbolSize(Symbol symbol) {
   if(symbol.isReference) {
@@ -126,11 +147,16 @@ int getSymbolSize(Symbol symbol) {
   return NONESIZE;
 }
 
+/* look into*/
 int getAddress(std::string name) {
   int address = 0;
   for (auto sym : symtable) {
-    if(sym.name != name) {
-      address += getSymbolSize(sym);
+    if(context() == LOCAL_CONTEXT){
+      if(context() == sym.isGlobal && sym.address <= 0)
+        address -= getSymbolSize(sym);
+    } else {
+      if(sym.name != name)
+        address += getSymbolSize(sym);
     }
   }
   return address;
@@ -138,6 +164,20 @@ int getAddress(std::string name) {
 
 int getResultType(int l, int r) {
   return (symtable[l].type == REAL || symtable[r].type == REAL) ? REAL : INT;
+}
+
+/*
+  Returns address of last allocated var in function/procedure
+*/
+int getStackSize() {
+  int lastSym = -1;
+  for (int i=0; i < symtable.size(); ++i) {
+    Symbol sym = symtable[i];
+    if(!sym.isGlobal && sym.token == VAR ) {
+      lastSym = i;
+    }
+  }
+  return symtable[lastSym].address > 0 ? 0 : abs(symtable[lastSym].address);
 }
 
 // representation
@@ -157,8 +197,8 @@ void prntSymtable() {
     << std::setw(std::to_string(symtable.size()).length()) << i++ << " "
     << (symbol.isGlobal ? "global " : "local  ")
     << std::setw(4) << (symbol.isReference ? "ref" : "")
-    << std::setw(lenName + 2) << symbol.name << " "
     << std::setw(lenTok + 2) << token_name(symbol.token) << " "
+    << std::setw(lenName + 2) << symbol.name << " "
     << std::setw(LenType + 2) << token_name(symbol.type)
     << ((symbol.token == VAR || symbol.token == ARRAY) ? "\toffset=" + std::to_string(symbol.address) : "")
     << std::endl;

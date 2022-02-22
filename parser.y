@@ -3,6 +3,10 @@
 
 int errRaised = 0;
 std::vector<int> idsList;
+std::vector<int> paramGrpIds;
+std::vector<int> argumentsList;
+
+int functionalOffset = 8; // FUNC = 12; PROC = 8;
 %}
 
 %token-table
@@ -103,17 +107,21 @@ declarations:
     ;
 
 functional:
-    heads local_vars BEG function_body END
+    heads
     {
-        wrtInstr("leave\t", "leave");
-        wrtInstr("return\t", "return");
+        startFuncEmittion();
+        setContext(LOCAL_CONTEXT);
+    }
+    local_vars BEG function_body END
+    {
+        int stackSize = newNum(std::to_string(getStackSize()), INT);
+        endFuncEmittion(symtable[stackSize].name);
         if(verbose)  {
             prntSymtable();
             std::cout << std::endl;
         }
         clearLocal();
         setContext(GLOBAL_CONTEXT);
-        // offset?
     }
     ;
     
@@ -123,29 +131,43 @@ heads:
 function:
     FUNC ID 
     {
-        setContext(LOCAL_CONTEXT);
         wrtLbl(symtable[$2].name);
     }
     arguments ':' type ';'
     {
-        // offset?
         Symbol* func = &symtable[$2];
         func->token = FUNC;
-        func->type = $5;
+        func->type = $6;
         
+        std::vector<Symbol> args;
+        for(auto id : paramGrpIds) {
+            Symbol idS = symtable[id];
+            args.push_back(newArgument(idS.type, idS.arrInfo));
+        }
+        func->arguments = args;
+        paramGrpIds.clear();
+
+        functionalOffset = 8;
         Symbol returnVar;
         returnVar.name = func->name;
         returnVar.token = VAR;
-        returnVar.type = $5;
+        returnVar.type = $6;
         returnVar.isReference = true;
         returnVar.isGlobal = false;
+        returnVar.address = functionalOffset;
         insert(returnVar);
-        // address?
     }
     ;
 
 arguments:
     '(' arguments_params ')'
+    {
+        std::vector<int>::iterator arg;
+        for (arg = paramGrpIds.end() - 1; arg >= paramGrpIds.begin(); arg--) {
+            functionalOffset += REFSIZE;
+            symtable[*arg].address = functionalOffset;
+        }
+    }
     | //empty
     ;
 
@@ -162,11 +184,13 @@ paramGrp:
 
         for(auto &symTabIdx : idsList) {
             Symbol* sym = &symtable[symTabIdx];
+            std::cout << sym->name << " " << token_name($3) << std::endl;
             sym->type = $3;
             sym->token = VAR;
             sym->isGlobal = false;
             sym->isReference = true;
         }
+        paramGrpIds.insert(paramGrpIds.end(), idsList.begin(), idsList.end());
         idsList.clear();
     };
 
@@ -174,11 +198,20 @@ procedure:
     PROC ID
     {
         wrtLbl(symtable[$2].name);
+        functionalOffset = 8;
     }
     arguments ';'
     {
-        // offset?
-        symtable[$2].token = PROC;
+        Symbol* proc = &symtable[$2];
+        proc->token = PROC;
+                
+        std::vector<Symbol> args;
+        for(auto id : idsList) {
+            Symbol idS = symtable[id];
+            args.push_back(newArgument(idS.type, idS.arrInfo));
+        }
+        proc->arguments = args;
+        idsList.clear();
     }
     ;
 
@@ -191,7 +224,9 @@ local_vars:
             Symbol* sym = &symtable[symTabIdx];
             sym->type = $5;       
             sym->token = VAR;
-            //address
+            sym->isGlobal = LOCAL_CONTEXT;
+            sym->address = -1;
+            sym->address = getAddress(sym->name);
         }
         idsList.clear();
     }
@@ -206,73 +241,47 @@ stmts:
 
 stmt:
     var ASSIGN simpler_expression
-    {
-        emitAssign(symtable[$1], symtable[$3]);
-    }
-    | factor 
-    | write 
-    | read 
+        {
+            emitAssign(symtable[$1], symtable[$3]);
+        }
+    | BEG function_body END
+    | proc
     | WHILE
-    {
-        int loop = newLabel();
-        int endLoop = newLabel();
-        wrtLbl(symtable[loop].name);
-        $$ = endLoop;
-        $1 = loop;
-    }
-    expression DO 
-    {
-        int fNum = newNum("0", symtable[$2].type);
-        emitJump(EQ, symtable[$3], symtable[fNum], symtable[$2]);
-    }
-    optional_stmts
-    {
-        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[$1]);
-        wrtLbl(symtable[$2].name);
-    }
+        {
+            int loop = newLabel();
+            int endLoop = newLabel();
+            wrtLbl(symtable[loop].name);
+            $$ = endLoop;
+            $1 = loop;
+        }
+        expression DO 
+        {
+            int fNum = newNum("0", symtable[$2].type);
+            emitJump(EQ, symtable[$3], symtable[fNum], symtable[$2]);
+        }
+        stmt
+        {
+            emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[$1]);
+            wrtLbl(symtable[$2].name);
+        }
     | IF expression 
-    {
-        int then = newLabel();
-        int fNum = newNum("0", symtable[$2].type); // false
-        emitJump(EQ, symtable[$2], symtable[fNum], symtable[then]);
-        $2 = then;
-    }
-    THEN optional_stmts 
-    {
-        int elseL = newLabel();
-        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[elseL]);
-        wrtLbl(symtable[$2].name);
-        $4 = elseL;
-    }
-    ELSE optional_stmts
-    {
-        wrtLbl(symtable[$4].name);
-    }
-    ;
-
-optional_stmts:
-    BEG function_body END 
-    | stmt ;
-
-expression:
-    simpler_expression 
-    | simpler_expression RELOP simpler_expression
-    {
-        int logicalVal = newTemp(getResultType($1, $3));
-        int truthy = newLabel();
-        emitJump($2, symtable[$1], symtable[$3], symtable[truthy]);
-
-        int fNum = newNum("0", getResultType($1, $3)); // false
-        int end = newLabel();        
-        emitAssign(symtable[logicalVal], symtable[fNum]);
-        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[end]);
-        wrtLbl(symtable[truthy].name);
-
-        int tNum = newNum("1", getResultType($1, $3)); // false
-        emitAssign(symtable[logicalVal], symtable[tNum]);
-        wrtLbl(symtable[end].name);
-        $$ = logicalVal;
-    }
+        {
+            int then = newLabel();
+            int fNum = newNum("0", symtable[$2].type); // false
+            emitJump(EQ, symtable[$2], symtable[fNum], symtable[then]);
+            $2 = then;
+        }
+        THEN stmt
+        {
+            int elseL = newLabel();
+            emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[elseL]);
+            wrtLbl(symtable[$2].name);
+            $4 = elseL;
+        }
+        ELSE stmt
+        {
+            wrtLbl(symtable[$4].name);
+        }
     ;
 
 simpler_expression:
@@ -296,6 +305,27 @@ simpler_expression:
     }
     ;
 
+expression:
+    simpler_expression 
+    | simpler_expression RELOP simpler_expression
+    {
+        int logicalVal = newTemp(INT);
+        int truthy = newLabel();
+        emitJump($2, symtable[$1], symtable[$3], symtable[truthy]);
+
+        int fNum = newNum("0", INT); // false
+        int end = newLabel();        
+        emitAssign(symtable[logicalVal], symtable[fNum]);
+        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[end]);
+        wrtLbl(symtable[truthy].name);
+
+        int tNum = newNum("1", INT); // false
+        emitAssign(symtable[logicalVal], symtable[tNum]);
+        wrtLbl(symtable[end].name);
+        $$ = logicalVal;
+    }
+    ;
+
 term:
     factor 
     | term MULOP factor
@@ -304,53 +334,108 @@ term:
     }
     ;
 
+proc:
+    ID 
+    {
+        // FUNC or PROC
+    }
+    | ID '(' expression_list ')'
+    {
+        // FUNC or PROC
+    }
+    | write 
+    | read 
+    ;
+
 factor:
     var 
     | VAL 
     | NOT factor
-    {
-        if (symtable[$2].type == REAL){ // realtoint
-            int temp = newTemp(INT);
-            emitRealToInt(symtable[$2], symtable[temp]);
-            $2 = temp;
+        {
+            if (symtable[$2].type == REAL){ // realtoint
+                int temp = newTemp(INT);
+                emitRealToInt(symtable[$2], symtable[temp]);
+                $2 = temp;
+            }
+
+            int factorZero = newLabel();
+            int fNum = newNum("0", INT); // false
+            emitJump(EQ, symtable[$2], symtable[fNum], symtable[factorZero]);
+            
+            int endNegate = newLabel();
+            int negated = newTemp(INT);
+            emitAssign(symtable[negated], symtable[fNum]);
+            emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[endNegate]);
+            wrtLbl(symtable[factorZero].name);
+
+            int tNum = newNum("1", INT); // true
+            emitAssign(symtable[negated], symtable[tNum]);
+            wrtLbl(symtable[endNegate].name);
+
+            $$ = negated;
         }
-
-        int factorZero = newLabel();
-        int fNum = newNum("0", INT); // false
-        emitJump(EQ, symtable[$2], symtable[fNum], symtable[factorZero]);
-        
-        int endNegate = newLabel();
-        int negated = newTemp(INT);
-        emitAssign(symtable[negated], symtable[fNum]);
-        emitJump(UNCONDITIONAL, EMPTY_SYMBOL, EMPTY_SYMBOL, symtable[endNegate]);
-        wrtLbl(symtable[factorZero].name);
-
-        int tNum = newNum("1", INT); // true
-        emitAssign(symtable[negated], symtable[tNum]);
-        wrtLbl(symtable[endNegate].name);
-
-        $$ = negated;
-    }
     | ID '(' expression_list ')'
-    {
-        Symbol sym = symtable[$1];
-        if(sym.token == FUNC || sym.token == PROC) {
-            emitCall(sym.name);
+        {
+            int id = lookup(symtable[$1].name, FUNC);
+            
+            if(id == -1) {
+                yyerror((symtable[$1].name + " is not callable or not assignable.").c_str());
+                YYERROR;
+            }
+
+            Symbol func = symtable[id];
+            if(func.arguments.size() < idsList.size()) {
+                yyerror((symtable[$1].name + " called with too many arguments").c_str());
+                YYERROR;
+            } else if (func.arguments.size() > idsList.size()) {
+                yyerror((symtable[$1].name + " called with too few arguments").c_str());
+                YYERROR;
+            }
+
+            int incsp = 0;
+            for(int id = 0; id < idsList.size(); ++id, incsp += REFSIZE) {
+                Symbol given = symtable[idsList[id]];
+                Symbol expectedType = func.arguments[id];
+                emitPush(given, expectedType);
+                
+            }
+            idsList.clear();
+            
+            // push result var
+            int result = newTemp(func.type);
+            emitPush(symtable[result], newArgument(func.type, func.arrInfo));
+            incsp += REFSIZE;
+            $$ = result;
+
+            emitCall(func.name);
+            
+            newNum(std::to_string(incsp), INT);
+            emitIncsp(incsp);
         }
-    }
     | '(' expression ')'
-    {
-        $$ = $2;
-    }
+        {
+            $$ = $2;
+        }
     ;
 
 var:
     ID 
     {
-        Symbol sym = symtable[$1];
-        if(sym.token == FUNC || sym.token == PROC) {
-            emitCall(sym.name);
+        if (symtable[$1].token != VAR) {
+            Symbol func = symtable[$1];
+            int incsp = 0;
+            // push result var
+            int result = newTemp(func.type);
+            emitPush(symtable[result], newArgument(func.type, func.arrInfo));
+            incsp += REFSIZE;
+            $$ = result;
+
+            emitCall(func.name);
+            
+            newNum(std::to_string(incsp), INT);
+            emitIncsp(incsp);
         }
+        
     }
     | ID '[' expression ']' {$$ = $1;};
 
@@ -366,7 +451,13 @@ expression_list:
     ;                                                                                                          
 
 read:
-    READ '(' expression_list ')' {if(verbose)printf("read %d\n", $2);}
+    READ '(' expression_list ')' 
+    {
+        for (auto id : idsList) {
+            emitRead(symtable[id]);
+        }
+        idsList.clear();
+    }
 
 write:
     WRITE '(' expression_list ')' 
