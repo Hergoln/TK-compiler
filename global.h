@@ -56,6 +56,8 @@ bool checkType (int);
 int maptoopttoken (std::string);
 
 // emit
+std::string format (Symbol);
+std::string formatName (std::string);
 void wrtInstr (std::string, std::string);
 void wrtLbl (std::string);
 void emitIntToReal (Symbol, Symbol);

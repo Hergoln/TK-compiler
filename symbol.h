@@ -5,8 +5,10 @@
 #define LOCAL_CONTEXT 0
 
 struct ArrayInfo {
-  int startAddr;
-  int stopAddr;
+  int startSymbol;    // index of VAL symbol from symtable
+  int endSymbol;      // index of VAL symbol from symtable
+  int startVal;
+  int endVal;
   int type;           // type of values in array INT/REAL/ARRAY
 };
 

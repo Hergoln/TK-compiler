@@ -4,9 +4,15 @@
 int errRaised = 0;
 std::vector<int> idsList;
 std::vector<int> paramGrpIds;
-std::vector<int> argumentsList;
+
+ArrayInfo curArrayInfo;
 
 int functionalOffset = 8; // FUNC = 12; PROC = 8;
+
+std::string faultyArgsCount(std::string what, int is, int exp, std::string rel) {
+    return what + " called with too " + rel + " arguments. Should be " + std::to_string(exp) + " but got " + std::to_string(is);
+}
+
 %}
 
 %token-table
@@ -78,6 +84,7 @@ global_vars:
             sym->token = VAR;
             sym->isGlobal = true;
             sym->address = getAddress(sym->name);
+            sym->arrInfo = curArrayInfo;
         }
         idsList.clear();
     }
@@ -88,11 +95,20 @@ simple_type:
     INT | REAL ;
 
 type:
-    simple_type | 
-    ARRAY '[' VAL '.' '.' VAL']' OF simple_type
+    simple_type 
+    {
+        curArrayInfo = EMPTY_ARRAY;
+    }
+    | ARRAY '[' VAL '.' '.' VAL']' OF simple_type
     {
         $$ = ARRAY;
-        // info about array
+        ArrayInfo info;
+        info.startSymbol = $3;
+        info.startVal = atoi(symtable[$3].name.c_str());
+        info.endSymbol = $6;
+        info.endVal = atoi(symtable[$6].name.c_str());
+        info.type = $9;
+        curArrayInfo = info;
     }
     ;
 
@@ -138,6 +154,7 @@ function:
         Symbol* func = &symtable[$2];
         func->token = FUNC;
         func->type = $6;
+        // tablica jako typ zwracany?
         
         std::vector<Symbol> args;
         for(auto id : paramGrpIds) {
@@ -184,11 +201,11 @@ paramGrp:
 
         for(auto &symTabIdx : idsList) {
             Symbol* sym = &symtable[symTabIdx];
-            std::cout << sym->name << " " << token_name($3) << std::endl;
             sym->type = $3;
             sym->token = VAR;
             sym->isGlobal = false;
             sym->isReference = true;
+            sym->arrInfo = curArrayInfo;
         }
         paramGrpIds.insert(paramGrpIds.end(), idsList.begin(), idsList.end());
         idsList.clear();
@@ -198,7 +215,7 @@ procedure:
     PROC ID
     {
         wrtLbl(symtable[$2].name);
-        functionalOffset = 8;
+        functionalOffset = 4;
     }
     arguments ';'
     {
@@ -206,12 +223,13 @@ procedure:
         proc->token = PROC;
                 
         std::vector<Symbol> args;
-        for(auto id : idsList) {
+        for(auto id : paramGrpIds) {
             Symbol idS = symtable[id];
             args.push_back(newArgument(idS.type, idS.arrInfo));
         }
         proc->arguments = args;
-        idsList.clear();
+
+        paramGrpIds.clear();
     }
     ;
 
@@ -225,6 +243,7 @@ local_vars:
             sym->type = $5;       
             sym->token = VAR;
             sym->isGlobal = LOCAL_CONTEXT;
+            sym->arrInfo = curArrayInfo;
             sym->address = -1;
             sym->address = getAddress(sym->name);
         }
@@ -366,10 +385,10 @@ proc:
 
         Symbol func = symtable[id];
         if(func.arguments.size() < idsList.size()) {
-            yyerror((symtable[$1].name + " called with too many arguments").c_str());
+            yyerror(faultyArgsCount(symtable[$1].name, idsList.size(), func.arguments.size(), "many").c_str());
             YYERROR;
         } else if (func.arguments.size() > idsList.size()) {
-            yyerror((symtable[$1].name + " called with too few arguments").c_str());
+            yyerror(faultyArgsCount(symtable[$1].name, idsList.size(), func.arguments.size(), "few").c_str());
             YYERROR;
         }
 
@@ -382,11 +401,13 @@ proc:
         }
         idsList.clear();
         
-        // push result var
-        int result = newTemp(func.type);
-        emitPush(symtable[result], newArgument(func.type, func.arrInfo));
-        incsp += REFSIZE;
-        $$ = result;
+        if(func.token == FUNC) {
+            // push result var
+            int result = newTemp(func.type);
+            emitPush(symtable[result], newArgument(func.type, func.arrInfo));
+            incsp += REFSIZE;
+            $$ = result;
+        }
 
         emitCall(func.name);
         
@@ -435,10 +456,10 @@ factor:
 
             Symbol func = symtable[id];
             if(func.arguments.size() < idsList.size()) {
-                yyerror((symtable[$1].name + " called with too many arguments").c_str());
+                yyerror(faultyArgsCount(symtable[$1].name, idsList.size(), func.arguments.size(), "many").c_str());
                 YYERROR;
             } else if (func.arguments.size() > idsList.size()) {
-                yyerror((symtable[$1].name + " called with too few arguments").c_str());
+                yyerror(faultyArgsCount(symtable[$1].name, idsList.size(), func.arguments.size(), "few").c_str());
                 YYERROR;
             }
 
@@ -471,7 +492,7 @@ factor:
 var:
     ID 
     {
-        if (symtable[$1].token != VAR) {
+        if (symtable[$1].token == FUNC || symtable[$1].token == PROC) {
             Symbol func = symtable[$1];
             int incsp = 0;
             // push result var
@@ -487,7 +508,42 @@ var:
         }
         
     }
-    | ID '[' expression ']' {$$ = $1;};
+    | ID '[' expression ']' 
+    {
+        Symbol array = symtable[$1];
+        if (array.type != ARRAY) {
+            std::string errMsg = "Element '" + array.name + "' is not iterable.";
+            yyerror(errMsg.c_str());
+            YYERROR;
+        }
+        ArrayInfo info = array.arrInfo;
+
+        Symbol expr = symtable[$3];
+        if (expr.type == ARRAY) {
+            std::string errMsg = "Cannot iterate using array.";
+            yyerror(errMsg.c_str());
+            YYERROR;
+        }
+
+        if(expr.type == REAL) {
+            int t = newTemp(expr.type);
+            Symbol temp = symtable[t];
+            emitRealToInt(expr, temp);
+            expr = temp;
+        }
+
+        // in compile time cannot check if expr value is within arrays indexes
+
+        int index = emitADDOP(expr, SUB, symtable[array.arrInfo.startSymbol]);
+        Symbol indexS = symtable[index];
+        wrtInstr(
+            "mul.i\t" + format(indexS) + ",#4," + format(indexS),
+            "mul.i\t" + formatName(indexS.name) + ",#4," + formatName(indexS.name));
+        int arrayElement = emitADDOP(array, ADD, indexS);
+        symtable[arrayElement].isReference = true;
+        $$ = arrayElement;
+    }
+    ;
 
 expression_list:
     expression_list ',' expression 

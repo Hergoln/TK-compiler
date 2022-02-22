@@ -15,11 +15,14 @@ std::string sign(int a){
 
 std::string format (Symbol s) {
   std::string out = "";
-  if(s.isReference && s.isGlobal == context()) {
+  if(s.isReference && s.isGlobal == context() && s.type != ARRAY) {
     out += "*";
   }
   if(!s.isGlobal) {
     out += "BP" + sign(s.address);
+  }
+  if (s.isGlobal && s.type == ARRAY) {
+    out += "#";
   }
   if(s.token == VAL || s.token == LABEL) {
     return "#" + s.name;
@@ -73,14 +76,17 @@ Expanded expandAssign (Symbol lvar, Symbol rvar) {
   if(lvar.type == rvar.type) {
     stype = tType(lvar.type);
     ttype = lvar.type;
+    if (rvar.type == ARRAY) {
+      lvar.arrInfo = rvar.arrInfo;
+    }
   } else {
-    if(lvar.type == INT && rvar.type == REAL) {
+    if((lvar.type == INT || lvar.type == ARRAY) && rvar.type == REAL) {
       int temp = newTemp(INT);
       stype = tType(INT);
       ttype = INT;
       emitRealToInt(rvar, symtable[temp]);
       rvar = symtable[temp];
-    } else if(lvar.type == REAL && rvar.type == INT) {
+    } else if(lvar.type == REAL && (rvar.type == INT || lvar.type == ARRAY)) {
       int temp = newTemp(REAL);
       stype = tType(REAL); 
       ttype = REAL;
@@ -108,26 +114,40 @@ int emitCall (std::string var) {
   return 0; // emit address of variable containing function result
 }
 
+int shouldChange(Symbol lvar, Symbol rvar) {
+  int tL = REAL,tR = REAL;
+  if (lvar.type == INT || lvar.type == ARRAY) tL = INT;
+  if (rvar.type == INT || rvar.type == ARRAY) tR = INT;
+  
+  return tL == tR;
+}
+
 Expanded expand (Symbol lvar, Symbol rvar) {
   std::string stype;
   int ttype;
-  if(lvar.type == rvar.type) {
-    stype = tType(lvar.type);
-    ttype = lvar.type;
+  if(shouldChange(lvar, rvar)) {
+    if(lvar.type != rvar.type) {
+      stype = tType(INT);
+      ttype = INT;
+    } else {
+      stype = tType(lvar.type);
+      ttype = lvar.type;
+    }
   } else {
-    if(lvar.type == INT && rvar.type == REAL) {
+    if((lvar.type == INT || lvar.type == ARRAY) && rvar.type == REAL) {
       int temp = newTemp(REAL);
       stype = tType(REAL);
       ttype = REAL;
       emitIntToReal(lvar, symtable[temp]);
       lvar = symtable[temp];
-    } else if(lvar.type == REAL && rvar.type == INT) {
+    } else if(lvar.type == REAL && (rvar.type == INT || rvar.type == ARRAY)) {
       int temp = newTemp(REAL);
       stype = tType(REAL);
       ttype = REAL;
       emitIntToReal(rvar, symtable[temp]);
       rvar = symtable[temp];
     } else {
+      std::cout << printS(lvar) << "; " << printS(rvar) << std::endl;
       yyerror(("Types " + 
       std::string(token_name(lvar.type)) + " and " + 
       std::string(token_name(rvar.type)) + " are incompatible.").c_str());
@@ -211,6 +231,11 @@ void emitJump(int op, Symbol lvar, Symbol rvar, Symbol lbl) {
 
 std::string formatRef (Symbol s) {
   std::string out = "";
+
+  if(s.isReference) {
+    out += "*";
+  }
+
   if(!s.isGlobal) {
     out += "BP" + sign(s.address);
   }
@@ -224,7 +249,7 @@ std::string formatRef (Symbol s) {
 
 void emitWrite (Symbol sym) {
   wrtInstr(
-    "write." + tType(sym.type) + "\t" + formatRef(sym), 
+    "write." + tType(sym.type) + "\t" + format(sym), 
     "write." + tType(sym.type) + "\t" + formatName(sym.name));
 }
 
@@ -251,7 +276,9 @@ void endFuncEmittion(std::string enterOffset) {
 }
 
 int eqTypes(Symbol one, Symbol other) {
-  return one.type == other.type;
+  return one.type == other.type 
+          && one.arrInfo.startVal == other.arrInfo.startVal
+          && one.arrInfo.endVal == other.arrInfo.endVal;
 }
 
 void emitPush (Symbol arg, Symbol expected) {

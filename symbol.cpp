@@ -1,7 +1,7 @@
 #include "global.h"
 
 Symbol EMPTY_SYMBOL;
-ArrayInfo EMPTY_ARRAY;
+ArrayInfo EMPTY_ARRAY = {-1, -1, -1, -1, -1};
 
 std::vector<Symbol> symtable;
 int globalContext = true;
@@ -132,17 +132,20 @@ int NONESIZE = 0;
 int INTSIZE = 4;
 int REALSIZE = 8;
 
+int sizeFromToken(int type) {
+  return type == REAL ? 8 :4;
+}
+
 int getSymbolSize(Symbol symbol) {
   if(symbol.isReference) {
     return REFSIZE;
   } else if(symbol.token == VAR) {
     if(symbol.type == INT) 
       return INTSIZE;
-    else
+    else if (symbol.type == REAL)
       return REALSIZE;
-  } else if(symbol.token == ARRAY) {
-    // to change and calculate later
-    return NONESIZE;
+    else if(symbol.type == ARRAY)
+      return (symbol.arrInfo.endVal - symbol.arrInfo.startVal + 1) * sizeFromToken(symbol.arrInfo.type);
   }
   return NONESIZE;
 }
@@ -155,8 +158,9 @@ int getAddress(std::string name) {
       if(context() == sym.isGlobal && sym.address <= 0)
         address -= getSymbolSize(sym);
     } else {
-      if(sym.name != name)
+      if(sym.name != name) {
         address += getSymbolSize(sym);
+      }
     }
   }
   return address;
