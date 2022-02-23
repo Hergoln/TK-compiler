@@ -234,9 +234,9 @@ void emitJump(int op, Symbol lvar, Symbol rvar, Symbol lbl) {
 std::string formatRef (Symbol s) {
   std::string out = "";
 
-  if(s.isReference) {
-    out += "*";
-  }
+  // if(s.isReference) {
+  //   out += "*";
+  // } 
 
   if(!s.isGlobal) {
     out += "BP" + sign(s.address);
@@ -257,7 +257,7 @@ void emitWrite (Symbol sym) {
 
 void emitRead (Symbol sym) {
   wrtInstr(
-    "read." + tType(sym.type) + "\t" + formatRef(sym), 
+    "read." + tType(sym.type) + "\t" + format(sym), 
     "read." + tType(sym.type) + "\t" + formatName(sym.name));
 }
 
@@ -315,6 +315,6 @@ void dumpToFile (std::string fname) {
   outFile.open(fname);
   outFile << outb.str();
   outFile.close();
-  
+
   std::cout << outb.str() << std::endl;
 }
