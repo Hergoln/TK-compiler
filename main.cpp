@@ -21,8 +21,11 @@ int main(int argc, char** argv){
     printf("Printout of symbols table:\n");
     prntSymtable();
   }
-
+  
   std::string outfname = "out.asm";
+  if (argc >2 ) {
+    outfname = std::string(argv[2]);
+  }
 
   if(verbose) {
     std::cout << std::endl << "Dumping compiled file:" << std::endl << std::endl;

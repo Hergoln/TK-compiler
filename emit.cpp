@@ -1,5 +1,7 @@
 #include "global.h"
 #include <sstream>
+#include <iostream>
+#include <fstream>
 
 std::stringstream outb;
 std::string freezed;
@@ -309,5 +311,10 @@ void emitIncsp(int incsp) {
 }
 
 void dumpToFile (std::string fname) {
+  std::ofstream outFile;
+  outFile.open(fname);
+  outFile << outb.str();
+  outFile.close();
+  
   std::cout << outb.str() << std::endl;
 }
